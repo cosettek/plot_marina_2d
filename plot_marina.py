@@ -56,6 +56,13 @@ with rasterio.open(tif_file) as src:
 if img.shape[0] == 3:
     img = img.transpose(1, 2, 0)
 
+# Oscurecer la imagen multiplicando por un factor (ej. 0.5 para 50% de brillo)
+darken_factor = 0.8
+img = img.astype(float) * darken_factor  # Convertir a float para evitar problemas de desbordamiento
+
+# Asegurarse de que la imagen oscurecida se mantenga dentro del rango de valores válidos [0, 255]
+img = np.clip(img, 0, 255).astype(np.uint8)
+
 # Crear y exportar la gráfica 2D para cada paso de tiempo
 for t in range(len(elevation_data_all)):
     elevation_data = elevation_data_all[t, :, :]
