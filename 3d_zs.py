@@ -33,35 +33,38 @@ if not os.path.exists(export_folder_3d):
 fname = os.path.join(path_sim, 'xboutput.nc')
 nc = Dataset(fname, "r", format="NETCDF4")
 
-# Obtener datos de elevación del agua y del fondo para cada paso de tiempo
-elevation_data_all = nc.variables['zs'][:]  # Dimensiones: (time, ny, nx)
-bottom_data_all = nc.variables['zb'][:]      # Dimensiones: (time, ny, nx)
+# Obtener datos de elevación del agua en cada paso de tiempo y el fondo
+elevation_data_all = nc.variables['zs'][:]  # Dimensiones: (globaltime, ny, nx)
+bottom_data = nc.variables['zb'][:]  # Fondo, que es fijo y tiene dimensiones (ny, nx)
 
-# Obtener coordenadas globales
-globalx = nc.variables['globalx'][:]
-globaly = nc.variables['globaly'][:]
+# Generar coordenadas usando el rango de los datos
+ny, nx = bottom_data.shape
+x_coords = np.linspace(0, nx-1, nx)
+y_coords = np.linspace(0, ny-1, ny)
 
-# Reducir el tamaño de los datos si es necesario
-step = 10  # Ajustar el tamaño de reducción
-globalx_reduced = globalx[::step, ::step]
-globaly_reduced = globaly[::step, ::step]
+# Crear malla de coordenadas X e Y
+X, Y = np.meshgrid(x_coords, y_coords)
+
+# Reducir los datos si es necesario
+step = 10
+X = X[::step, ::step]
+Y = Y[::step, ::step]
+bottom_data_reduced = bottom_data[::step, ::step]
+elevation_data_reduced = elevation_data_all[:, ::step, ::step]
 
 # Crear y exportar la gráfica 3D para cada paso de tiempo
-num_timesteps = elevation_data_all.shape[0]
-for t in range(num_timesteps):
-    # Obtener el paso de tiempo actual para elevación y fondo
-    elevation_data = elevation_data_all[t, ::step, ::step]
-    bottom_data = bottom_data_all[t, ::step, ::step]
+for t in range(len(elevation_data_reduced)):
+    elevation_data = elevation_data_reduced[t, :, :]
     
     # Crear la figura 3D
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
     
     # Crear la superficie 3D de elevación del agua
-    surf_water = ax.plot_surface(globalx_reduced, globaly_reduced, elevation_data, cmap=color_map, edgecolor='none', alpha=0.7)
+    surf_water = ax.plot_surface(X, Y, elevation_data, cmap=color_map, edgecolor='none', alpha=0.7)
     
     # Crear la superficie 3D del fondo marino
-    surf_bottom = ax.plot_surface(globalx_reduced, globaly_reduced, bottom_data, cmap=bottom_color_map, edgecolor='none', alpha=0.7)
+    surf_bottom = ax.plot_surface(X, Y, bottom_data_reduced, cmap=bottom_color_map, edgecolor='none', alpha=0.7)
     
     # Configuración de etiquetas
     ax.set_xlabel('Coordenada X', fontname='TTInterphasesPro-DmBd', fontsize=14, labelpad=10)
